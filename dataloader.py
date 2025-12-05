@@ -43,7 +43,7 @@ class HSIDataset(Dataset):
       - ref: riflettanza        [16,16,121]
       - rad: radianza simulata  [16,16,121]
     """
-    def __init__(self, root_dir, illuminant, bag_key="data",
+    def __init__(self, root_dir, illuminant=D65_bb3000, bag_key="data",
                  dtype=torch.float32):
         """
         root_dir:    cartella root che contiene folders 'bags' e 'labels'
