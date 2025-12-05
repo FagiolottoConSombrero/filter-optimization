@@ -9,20 +9,26 @@ from torch.utils.data import Subset, DataLoader
 
 
 class OptRecon(pl.LightningModule):
-    def __init__(self, lr=1e-3, patience=20, model_type=1):
+    def __init__(self, lr=1e-3, patience=20, model_type=1, in_dim=8):
         super().__init__()
         self.model_type = model_type
         self.save_hyperparameters()
         self.filter2_module = init_transmittance()  # usa la tua funzione
         self.lr = lr
         self.patience = patience
+        self.in_dim = in_dim
+        self.input = 0
 
         if model_type == 1:
-            self.model = SpectralMLP()  # poi clamp nella loss
+            self.model = SpectralMLP(in_dim=self.in_dim)  # poi clamp nella loss
 
     def forward(self, x):  # x = radianza HSI: [B,121,16,16]
         img1, img2 = simulate_two_shots_camera(x, self.filter2_module)
-        return self.model(torch.cat((img1, img2), dim=1))  # [B,121,16,16]
+        if self.in_dim == 8:
+            self.input = torch.cat((img1, img2), dim=1)
+        else:
+            self.input = img1
+        return self.model(self.input)  # [B,121,16,16]
 
     def step(self, batch, stage):
         ref, rad = batch  # ref=[B,121,16,16] riflettanza, rad=[B,121,16,16] radianza

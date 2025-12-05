@@ -6,6 +6,7 @@ import argparse
 def main(
     data_root: str,
     save_dir: str = "runs/llp",
+    input_dim: int = 8,
     model_type: int = 1,
     batch_size: int = 8,
     epochs: int = 50,
@@ -25,7 +26,7 @@ def main(
     )
 
     # ----- modello LLP -----
-    model = OptRecon(lr=1e-3, patience=patience_loss, model_type=model_type)
+    model = OptRecon(lr=1e-3, patience=patience_loss, model_type=model_type, in_dim=input_dim)
 
     # ----- callbacks -----
     ckpt = ModelCheckpoint(dirpath=save_dir, filename="best",monitor="val_loss", mode="min", save_top_k=1)
@@ -52,6 +53,7 @@ if __name__ == "__main__":
     arg.add_argument("--data_root", type=str, required=True)
     arg.add_argument("--save_dir", type=str, default="runs/recon")
     arg.add_argument("--batch_size", type=int, default=32)
+    arg.add_argument("--input_dim", type=int, default=8)
     arg.add_argument("--model_type", type=int, default=1)
     arg.add_argument("--epochs", type=int, default=5000)
     arg.add_argument("--seed", type=int, default=42)
@@ -64,6 +66,7 @@ if __name__ == "__main__":
     main(
         data_root=args.data_root,
         save_dir=args.save_dir,
+        input_dim=args.input_dim,
         model_type=args.model_type,
         batch_size=args.batch_size,
         epochs=args.epochs,

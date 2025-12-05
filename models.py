@@ -8,12 +8,11 @@ class SpectralMLP(nn.Module):
     Output: (B, 121, 16, 16)
     MLP per-pixel: R^8 -> R^121 applicato su ogni (h,w).
     """
-    def __init__(self, hidden_dim=256, num_layers=3, out_activation=None):
+    def __init__(self, hidden_dim=256, num_layers=3, out_activation=None, in_dim=8):
         super().__init__()
         act = nn.ReLU()
 
         layers = []
-        in_dim = 8
         for _ in range(max(0, num_layers - 1)):
             layers += [nn.Linear(in_dim, hidden_dim), act]
             in_dim = hidden_dim
@@ -25,10 +24,10 @@ class SpectralMLP(nn.Module):
         self.mlp = nn.Sequential(*layers)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # x: (B, 8, 16, 16)
+        # x: (B, C, 16, 16)
         B, C, H, W = x.shape
-        x = x.permute(0, 2, 3, 1).contiguous()   # (B,16,16,8)
-        x = x.view(B * H * W, 8)                 # (BHW, 8)
+        x = x.permute(0, 2, 3, 1).contiguous()   # (B,16,16,C)
+        x = x.view(B * H * W, C)                 # (BHW, C)
         y = self.mlp(x)                          # (BHW, 121)
         y = y.view(B, H, W, 121).permute(0, 3, 1, 2).contiguous()  # (B,121,16,16)
         return y
