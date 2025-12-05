@@ -94,7 +94,7 @@ def simulate_two_shots_camera(HSI, filter2):
     # HSI:   [B,121,H,W]
     curves = get_sensor_curves().to(HSI.device)  # [4,121]
     f1 = filter1.to(HSI.device)                  # [121] fisso
-    f2 = filter2.to(HSI.device)                  # [121] learnable
+    f2 = filter2().to(HSI.device)                  # [121] learnable
 
     eff1 = curves * f1[None, :]   # [4,121]
     eff2 = curves * f2[None, :]   # [4,121]
