@@ -1,23 +1,24 @@
 import pytorch_lightning as pl
 import torch.nn.functional as F
+import random
 from models import *
 from filters import *
+from dataloader import *
+from sklearn.model_selection import train_test_split
+from torch.utils.data import Subset, DataLoader
 
 
-class LLP(pl.LightningModule):
-
-    def __init__(self, lr=1e-3, num_classes=5, patience=20, model_type=1):
+class OptRecon(pl.LightningModule):
+    def __init__(self, lr=1e-3, patience=20, model_type=1):
         super().__init__()
         self.model_type = model_type
         self.save_hyperparameters()
+        self.filter2_module = init_transmittance()  # usa la tua funzione
+        self.lr = lr
+        self.patience = patience
+
         if model_type == 1:
             self.model = SpectralMLP()  # poi clamp nella loss
-
-        self.filter2_module = init_transmittance()  # usa la tua funzione
-
-        self.lr = lr
-        self.num_classes = num_classes
-        self.patience = patience
 
     def forward(self, x):  # x = radianza HSI: [B,121,16,16]
         img1, img2 = simulate_two_shots_camera(x, self.filter2_module)
@@ -80,3 +81,23 @@ def spectral_reflectance_loss(R_pred, R_gt, lambda_ang=0.2, eps=1e-8):
     loss_ang = (1.0 - cos_sim).mean()
 
     return loss_mae + lambda_ang * loss_ang, loss_mae
+
+
+def make_loaders(data_root, batch_size=8, val_ratio=0.2):
+    # carica l'intero dataset
+    full_ds = HSIDataset(data_root)
+    # generiamo gli indici
+    indices = list(range(len(full_ds)))
+    train_idx, val_idx = train_test_split(indices, test_size=val_ratio, shuffle=True, random_state=42)
+    train_ds = Subset(full_ds, train_idx)
+    val_ds = Subset(full_ds, val_idx)
+    # DataLoader
+    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=os.cpu_count(), pin_memory=True)
+    val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, num_workers=os.cpu_count(), pin_memory=True)
+    return train_loader, val_loader
+
+
+def set_seed(seed=42):
+    random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
