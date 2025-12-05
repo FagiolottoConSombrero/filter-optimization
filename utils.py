@@ -29,7 +29,7 @@ class OptRecon(pl.LightningModule):
             img1, img2 = simulate_two_shots_camera(x, self.filter2_module)
             self.input = torch.cat((img1, img2), dim=1)
         else:
-            img1 = simulate_single_shots_camera()
+            img1 = simulate_single_shots_camera(x)
             self.input = img1
         return self.model(self.input)  # [B,121,16,16]
 
