@@ -8,7 +8,7 @@ import numpy as np
 # ===========================
 
 # Carica dati
-df = pd.read_csv('/Users/kolyszko/Downloads/filters_VIS_IR_resampled_400_1000_5nm.csv')
+df = pd.read_csv('/home/acp/Documenti/filters_VIS_IR_resampled_400_1000_5nm.csv')
 wavelength = df['wavelength_nm'].values
 
 # Unione
@@ -64,7 +64,7 @@ def get_filters():
     return filter1, filter2_module()
 
 
-def get_sensor_curves(csv_path: str = '/Users/kolyszko/Downloads/Sony_ILCE_6100_RGBIR_scaled_005.csv'):
+def get_sensor_curves(csv_path: str = '/home/acp/Documenti/Sony_ILCE_6100_RGBIR_scaled_005.csv'):
     """
     Legge le curve spettrali del sensore RGB-IR Sony
     e restituisce un tensore PyTorch di shape [4, 121].
