@@ -34,11 +34,11 @@ class OptimizedFilter(nn.Module):
         return torch.sigmoid(self.raw_param) # sigmoid serve per tenere i valori nel range 0-1
 
 
-filter2_module = None   # definita una volta, fuori dalle funzioni
+filter2 = None   # definita una volta, fuori dalle funzioni
 
 
 def init_transmittance(init_type: int = 0):
-    global filter2_module
+    global filter2
 
     if init_type == 0:
         # inizializzazione complementare
@@ -51,17 +51,8 @@ def init_transmittance(init_type: int = 0):
         f2_init = torch.rand_like(filter1) * 0.2
 
     # modulo learnable
-    filter2_module = OptimizedFilter(f2_init)
-    return filter2_module
-
-
-def get_filters():
-    """
-    Restituisce:
-      f1: [L] fisso
-      f2: [L] learnable (già passato da sigmoid)
-    """
-    return filter1, filter2_module()
+    filter2 = OptimizedFilter(f2_init)
+    return filter2
 
 
 def get_sensor_curves(csv_path: str = '/home/acp/Documenti/Sony_ILCE_6100_RGBIR_scaled_005.csv'):
@@ -99,11 +90,11 @@ def get_sensor_curves(csv_path: str = '/home/acp/Documenti/Sony_ILCE_6100_RGBIR_
     return curves
 
 
-def simulate_two_shots_camera(HSI, filter2_module):
+def simulate_two_shots_camera(HSI, filter2):
     # HSI:   [B,121,H,W]
     curves = get_sensor_curves().to(HSI.device)  # [4,121]
     f1 = filter1.to(HSI.device)                  # [121] fisso
-    f2 = filter2_module().to(HSI.device)         # [121] learnable
+    f2 = filter2.to(HSI.device)                  # [121] learnable
 
     eff1 = curves * f1[None, :]   # [4,121]
     eff2 = curves * f2[None, :]   # [4,121]
@@ -112,6 +103,16 @@ def simulate_two_shots_camera(HSI, filter2_module):
     img2 = torch.einsum('b l h w, c l -> b c h w', HSI, eff2)
 
     return img1, img2
+
+
+def simulate_single_shots_camera(HSI):
+    # HSI:   [B,121,H,W]
+    curves = get_sensor_curves().to(HSI.device)  # [4,121]
+    f1 = filter1.to(HSI.device)                  # [121] fisso
+    eff1 = curves * f1[None, :]   # [4,121]
+    img1 = torch.einsum('b l h w, c l -> b c h w', HSI, eff1)
+
+    return img1
 
 
 
