@@ -10,7 +10,7 @@ class SpectralMLP(nn.Module):
     """
     def __init__(self, hidden_dim=256, num_layers=3, out_activation=None):
         super().__init__()
-        act = nn.ReLU
+        act = nn.ReLU()
 
         layers = []
         in_dim = 8
