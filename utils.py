@@ -13,12 +13,13 @@ class OptRecon(pl.LightningModule):
         super().__init__()
         self.model_type = model_type
         self.save_hyperparameters()
-        self.filter2_module = init_transmittance()  # usa la tua funzione
         self.lr = lr
         self.patience = patience
         self.in_dim = in_dim
         self.input = 0
 
+        if in_dim == 8:
+            self.filter2_module = init_transmittance()
         if model_type == 1:
             self.model = SpectralMLP(in_dim=self.in_dim)  # poi clamp nella loss
         elif model_type == 2:
