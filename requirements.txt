@@ -21,3 +21,4 @@ kiwisolver~=1.4.7
 scikit-learn~=1.6.1
 pandas~=2.3.3
 h5py~=3.14.0
+einops~=0.8.1

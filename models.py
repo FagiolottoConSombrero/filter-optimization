@@ -4,6 +4,8 @@ import torch.nn.functional as F
 from einops import rearrange
 import math
 import warnings
+from torchinfo import summary
+from torch.nn.init import _calculate_fan_in_and_fan_out
 
 
 class SpectralMLP(nn.Module):
@@ -35,9 +37,6 @@ class SpectralMLP(nn.Module):
         y = self.mlp(x)                          # (BHW, 121)
         y = y.view(B, H, W, 121).permute(0, 3, 1, 2).contiguous()  # (B,121,16,16)
         return y
-
-
-from torch.nn.init import _calculate_fan_in_and_fan_out
 
 
 def _no_grad_trunc_normal_(tensor, mean, std, a, b):
@@ -225,7 +224,7 @@ class MSAB(nn.Module):
 
 
 class MST(nn.Module):
-    def __init__(self, in_dim=121, out_dim=121, dim=121, stage=2, num_blocks=[2,4,4]):
+    def __init__(self, in_dim=31, out_dim=31, dim=31, stage=2, num_blocks=[2,4,4]):
         super(MST, self).__init__()
         self.dim = dim
         self.stage = stage
@@ -308,26 +307,31 @@ class MST(nn.Module):
 
 
 class MST_Plus_Plus(nn.Module):
-    def __init__(self, in_channels=8, out_channels=121, n_feat=121, stage=3):
+    def __init__(self, in_channels=8, out_channels=121, n_feat=31, stage=3):
         super(MST_Plus_Plus, self).__init__()
         self.stage = stage
-        self.conv_in = nn.Conv2d(in_channels, n_feat, kernel_size=3, padding=(3 - 1) // 2,bias=False)
-        modules_body = [MST(dim=121, stage=2, num_blocks=[1,1,1]) for _ in range(stage)]
+        self.n_feat = n_feat
+        self.out_channels = out_channels
+
+        self.conv_in = nn.Conv2d(in_channels, n_feat, kernel_size=3, padding=(3 - 1) // 2, bias=False)
+        modules_body = [
+            MST(in_dim=n_feat, out_dim=n_feat, dim=n_feat, stage=2, num_blocks=[1, 1, 1])
+            for _ in range(stage)]
         self.body = nn.Sequential(*modules_body)
-        self.conv_out = nn.Conv2d(n_feat, out_channels, kernel_size=3, padding=(3 - 1) // 2,bias=False)
+
+        # Conv di uscita ancora nello spazio feature (31 → 31)
+        self.conv_out = nn.Conv2d(n_feat, n_feat, kernel_size=3, padding=(3 - 1) // 2, bias=False)
+        self.to_spec = nn.Conv2d(n_feat, out_channels, kernel_size=1, padding=0, bias=False)
 
     def forward(self, x):
-        """
-        x: [b,c,h,w]
-        return out:[b,c,h,w]
-        """
         b, c, h_inp, w_inp = x.shape
         hb, wb = 8, 8
         pad_h = (hb - h_inp % hb) % hb
         pad_w = (wb - w_inp % wb) % wb
         x = F.pad(x, [0, pad_w, 0, pad_h], mode='reflect')
-        x = self.conv_in(x)
-        h = self.body(x)
+        feat = self.conv_in(x)
+        h = self.body(feat)
         h = self.conv_out(h)
-        h += x
+        h = h + feat
+        h = self.to_spec(h)
         return h[:, :, :h_inp, :w_inp]
