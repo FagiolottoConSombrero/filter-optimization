@@ -21,6 +21,8 @@ class OptRecon(pl.LightningModule):
 
         if model_type == 1:
             self.model = SpectralMLP(in_dim=self.in_dim)  # poi clamp nella loss
+        elif model_type == 2:
+            self.model = MST_Plus_Plus(in_channels=self.in_dim)
 
     def forward(self, x):  # x = radianza HSI: [B,121,16,16]
         img1, img2 = simulate_two_shots_camera(x, self.filter2_module)
