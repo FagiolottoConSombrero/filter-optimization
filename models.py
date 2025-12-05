@@ -4,7 +4,6 @@ import torch.nn.functional as F
 from einops import rearrange
 import math
 import warnings
-from torchinfo import summary
 from torch.nn.init import _calculate_fan_in_and_fan_out
 
 
