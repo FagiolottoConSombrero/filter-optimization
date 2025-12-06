@@ -37,7 +37,7 @@ class OptimizedFilter(nn.Module):
 filter2 = None   # definita una volta, fuori dalle funzioni
 
 
-def init_transmittance(init_type: int = 0):
+def init_transmittance(init_type: int = 2):
     global filter2
 
     if init_type == 0:
