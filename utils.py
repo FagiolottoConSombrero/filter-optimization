@@ -110,3 +110,24 @@ def set_seed(seed=42):
     random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
+
+
+def spectral_angle_mapper(s_true: torch.Tensor, s_recon: torch.Tensor) -> torch.Tensor:
+    """
+    Calcola il SAM per batch.
+    s_true, s_recon: (B, C)
+    Ritorna: (B,) in radianti
+    """
+    # prodotto scalare per campione
+    dot = (s_true * s_recon).sum(dim=1)           # (B,)
+
+    # norme per campione
+    norm_true = torch.norm(s_true, dim=1)         # (B,)
+    norm_recon = torch.norm(s_recon, dim=1)       # (B,)
+
+    # coseno dell'angolo
+    cosang = dot / (norm_true * norm_recon + 1e-8)
+    cosang = cosang.clamp(-1 + 1e-7, 1 - 1e-7)
+
+    angle = torch.acos(cosang)                    # (B,)
+    return angle

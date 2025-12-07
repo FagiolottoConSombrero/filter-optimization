@@ -14,6 +14,7 @@ def main(
     patience_loss: int = 50,
     patience_es: int = 50,
     devices="auto",
+    learning_rate: float = 1e-3,
 ):
 
     set_seed(seed)
@@ -26,7 +27,7 @@ def main(
     )
 
     # ----- modello LLP -----
-    model = OptRecon(lr=1e-3, patience=patience_loss, model_type=model_type, in_dim=input_dim)
+    model = OptRecon(lr=learning_rate, patience=patience_loss, model_type=model_type, in_dim=input_dim)
 
     # ----- callbacks -----
     ckpt = ModelCheckpoint(dirpath=save_dir, filename="best",monitor="val_loss", mode="min", save_top_k=1)
@@ -60,6 +61,7 @@ if __name__ == "__main__":
     arg.add_argument("--patience_loss", type=int, default=50)
     arg.add_argument("--patience_early_stopping", type=int, default=100)
     arg.add_argument("--devices", type=str, default="auto")
+    arg.add_argument("--lr", type=int, default="1e-3")
 
     args = arg.parse_args()
 
@@ -74,4 +76,5 @@ if __name__ == "__main__":
         patience_loss=args.patience_loss,
         patience_es=args.patience_early_stopping,
         devices=args.devices,
+        learning_rate=args.lr,
     )
