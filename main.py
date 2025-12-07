@@ -61,7 +61,7 @@ if __name__ == "__main__":
     arg.add_argument("--patience_loss", type=int, default=50)
     arg.add_argument("--patience_early_stopping", type=int, default=100)
     arg.add_argument("--devices", type=str, default="auto")
-    arg.add_argument("--lr", type=int, default="1e-3")
+    arg.add_argument("--lr", type=float, default=1e-3)
 
     args = arg.parse_args()
 
