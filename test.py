@@ -228,7 +228,7 @@ def main(
     del train_loader  # non lo usiamo
 
     # modello di ricostruzione (meas + decoder), SENZA classificazione
-    recon_model = OptRecon.load_from_checkpoint(recon_ckpt)
+    recon_model = OptRecon.load_from_checkpoint(recon_ckpt, strict=False)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
