@@ -91,59 +91,64 @@ def collect_recon_stats(
     """
     Usa SOLO il modello di ricostruzione per:
       - ricostruire ogni spettro
-      - calcolare MSE spettrale
-      - salvare GT, Recon, label
+      - calcolare MSE spettrale e SAM
+      - salvare GT, Recon, "label" fittizia
 
-    Assunzione: il loader restituisce (x, y),
-    dove:
-      - x è lo spettro o il tensore da cui ricavare lo spettro
-      - y è la label (classe)
+    Assunzione (coerente con il training):
+      loader restituisce (ref, rad), con:
+        ref: [B, 121, H, W]  riflettanza GT
+        rad: [B, 121, H, W]  radianza (input del modello)
     """
     recon_model.eval()
     recon_model.to(device)
 
     all_mse = []
     all_sam = []
-    all_y = []
+    all_y = []        # se serve per plot_best_worst_per_class
     all_s_true = []
     all_s_recon = []
 
     with torch.no_grad():
-        for x, y in loader:
-            x = x.to(device)  # (B,121) oppure (B,1,121) oppure (B,121,H,W)
-            y = y.to(device)  # (B,)
+        for ref, rad in loader:
+            # sposta su device
+            ref = ref.to(device)   # [B, L, H, W]
+            rad = rad.to(device)   # [B, L, H, W]
 
-            # porta tutto a spettro [B, L]
-            if x.dim() == 4:
-                # (B, C, H, W) -> media spaziale sulle dimensioni H,W
-                # ipotesi: C = 121
-                s_true = x.mean(dim=(2, 3))
-            else:
-                # (B, L) oppure (B, 1, L)
-                s_true = x
-                if s_true.dim() == 3 and s_true.shape[1] == 1:
-                    s_true = s_true[:, 0, :]
+            B, L, H, W = ref.shape
 
-            # ricostruzione: il modello prende in input s_true (adatta se il tuo modello si aspetta altro)
-            s_recon = recon_model(s_true)  # (B, L) atteso
+            # ===== FORWARD CORRETTO: usa rad come nello step() =====
+            recon = recon_model(rad)       # [B, L, H, W]
 
-            # MSE spettrale per campione
-            mse = ((s_recon - s_true) ** 2).mean(dim=1)  # (B,)
-            sam = spectral_angle_mapper(s_true, s_recon)
+            # ===== Flatten a spettri [Npix, L] per le metriche =====
+            # (B, L, H, W) -> (B, L, H*W) -> (B, H*W, L) -> (B*H*W, L)
+            ref_flat   = ref.view(B, L, -1).permute(0, 2, 1).reshape(-1, L)     # [Npix, L]
+            recon_flat = recon.view(B, L, -1).permute(0, 2, 1).reshape(-1, L)   # [Npix, L]
 
+            # MSE spettrale per spettro
+            mse = ((recon_flat - ref_flat) ** 2).mean(dim=1)    # [Npix]
+
+            # SAM: usa la tua funzione (true, recon) con shape [Npix, L]
+            sam = spectral_angle_mapper(ref_flat, recon_flat)   # [Npix]
+
+            # Accumula su CPU
             all_mse.append(mse.cpu())
             all_sam.append(sam.cpu())
-            all_y.append(y.cpu())
-            all_s_true.append(s_true.cpu())
-            all_s_recon.append(s_recon.cpu())
+            all_s_true.append(ref_flat.cpu())
+            all_s_recon.append(recon_flat.cpu())
 
-    all_mse = torch.cat(all_mse).numpy()           # (N,)
-    all_sam = torch.cat(all_sam, dim=0).numpy()  # (N,)
+            # "y" fittizio: una sola classe (0) per tutti
+            all_y.append(torch.zeros_like(mse, dtype=torch.long).cpu())
+
+    # concatena lungo N spettri
+    all_mse = torch.cat(all_mse, dim=0).numpy()          # (N,)
+    all_sam = torch.cat(all_sam, dim=0).numpy()          # (N,)
     all_y = torch.cat(all_y, dim=0).numpy().astype(int)  # (N,)
-    all_s_true = torch.cat(all_s_true, dim=0).numpy()  # (N,121)
-    all_s_recon = torch.cat(all_s_recon, dim=0).numpy()  # (N,121)
+    all_s_true = torch.cat(all_s_true, dim=0).numpy()    # (N, L)
+    all_s_recon = torch.cat(all_s_recon, dim=0).numpy()  # (N, L)
 
     return all_mse, all_sam, all_y, all_s_true, all_s_recon
+
+
 
 
 # ---------- selezione best/worst e plot ----------
@@ -265,11 +270,8 @@ if __name__ == "__main__":
     arg.add_argument("--save_dir", type=str, default="runs/recon")
     arg.add_argument("--batch_size", type=int, default=32)
     arg.add_argument("--input_dim", type=int, default=8)
-    arg.add_argument("--model_type", type=int, default=1)
     arg.add_argument("--epochs", type=int, default=5000)
     arg.add_argument("--seed", type=int, default=42)
-    arg.add_argument("--patience_loss", type=int, default=50)
-    arg.add_argument("--patience_early_stopping", type=int, default=100)
     arg.add_argument("--devices", type=str, default="auto")
     arg.add_argument("--recon_ckpt", type=str, default="")
 
