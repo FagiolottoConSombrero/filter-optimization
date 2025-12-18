@@ -99,7 +99,7 @@ def spectral_reflectance_loss(R_pred, R_gt, lambda_ang=0.2, lambda_smooth=0.05, 
         + lambda_ang * loss_ang
         + lambda_smooth * loss_smooth
     )
-    return loss_total
+    return loss_total, loss_mae
 
 
 def spectral_smoothness_loss(R):
