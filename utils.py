@@ -68,30 +68,44 @@ class OptRecon(pl.LightningModule):
             }}
 
 
-def spectral_reflectance_loss(R_pred, R_gt, lambda_ang=0.2, eps=1e-8):
+def spectral_reflectance_loss(R_pred, R_gt, lambda_ang=0.2, lambda_smooth=0.05, eps=1e-8):
     """
-    R_pred, R_gt: [B, 121, H, W]  (riflettanza)
+    R_pred, R_gt: [B, L, H, W]
     """
-    # clamp per sicurezza (riflettanza fisica 0–1)
+    # clamp fisico
     R_pred = torch.clamp(R_pred, 0.0, 1.0)
 
-    # --- L1 su tutta la mappa spettrale ---
+    # ---------- MAE spettrale ----------
     loss_mae = F.l1_loss(R_pred, R_gt)
 
-    # --- termine angolare (SAM-like) per pixel ---
+    # ---------- Termine angolare (SAM-like) ----------
     B, L, H, W = R_pred.shape
 
-    # [B*H*W, L]
     pred_flat = R_pred.permute(0, 2, 3, 1).reshape(-1, L)
     gt_flat = R_gt.permute(0, 2, 3, 1).reshape(-1, L)
 
     pred_n = pred_flat / (pred_flat.norm(dim=1, keepdim=True) + eps)
     gt_n = gt_flat / (gt_flat.norm(dim=1, keepdim=True) + eps)
 
-    cos_sim = (pred_n * gt_n).sum(dim=1)  # [B*H*W]
+    cos_sim = (pred_n * gt_n).sum(dim=1)
     loss_ang = (1.0 - cos_sim).mean()
 
-    return loss_mae + lambda_ang * loss_ang, loss_mae
+    # ---------- Smoothness spettrale ----------
+    loss_smooth = spectral_smoothness_loss(R_pred)
+
+    # ---------- Loss totale ----------
+    loss_total = (
+        loss_mae
+        + lambda_ang * loss_ang
+        + lambda_smooth * loss_smooth
+    )
+    return loss_total
+
+
+def spectral_smoothness_loss(R):
+    # R: [B, L, H, W]
+    dr = R[:, 1:, :, :] - R[:, :-1, :, :]
+    return dr.abs().mean()
 
 
 def make_loaders(data_root, batch_size=8, val_ratio=0.2):
