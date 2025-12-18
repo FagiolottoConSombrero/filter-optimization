@@ -115,6 +115,14 @@ def simulate_single_shots_camera(HSI):
     return img1
 
 
+def simulate_no_filter_camera(HSI):
+    # HSI:   [B,121,H,W]
+    curves = get_sensor_curves().to(HSI.device)  # [4,121]
+    img1 = torch.einsum('b l h w, c l -> b c h w', HSI, curves)
+
+    return img1
+
+
 
 
 

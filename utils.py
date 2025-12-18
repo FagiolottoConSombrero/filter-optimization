@@ -25,12 +25,13 @@ class OptRecon(pl.LightningModule):
             self.model = MST_Plus_Plus(in_channels=self.in_dim)
 
     def forward(self, x):  # x = radianza HSI: [B,121,16,16]
-        if self.in_dim == 8:
+        if self.in_dim == 2:
             img1, img2 = simulate_two_shots_camera(x, self.filter2_module)
             self.input = torch.cat((img1, img2), dim=1)
+        elif self.in_dim == 1:
+            self.input = simulate_single_shots_camera(x)
         else:
-            img1 = simulate_single_shots_camera(x)
-            self.input = img1
+            self.input = simulate_no_filter_camera(x)
         return self.model(self.input)  # [B,121,16,16]
 
     def step(self, batch, stage):
