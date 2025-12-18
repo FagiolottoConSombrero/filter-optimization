@@ -8,7 +8,7 @@ from torch.utils.data import Subset, DataLoader
 
 
 class OptRecon(pl.LightningModule):
-    def __init__(self, lr=1e-3, patience=20, model_type=1, in_dim=8):
+    def __init__(self, lr=1e-3, patience=20, model_type=1, in_dim=8, lambda_ang=0.2):
         super().__init__()
         self.model_type = model_type
         self.save_hyperparameters()
@@ -16,6 +16,7 @@ class OptRecon(pl.LightningModule):
         self.patience = patience
         self.in_dim = in_dim
         self.input = 0
+        self.lambda_ang = lambda_ang
 
         if in_dim == 8:
             self.filter2_module = init_transmittance()
@@ -40,7 +41,7 @@ class OptRecon(pl.LightningModule):
         recon = self(rad)                     # [B,121,16,16], riflettanza ricostruita
 
         # ---- loss spettrale per riflettanza ----
-        loss, mae = spectral_reflectance_loss(recon, ref, lambda_ang=0.2)
+        loss, mae = spectral_reflectance_loss(recon, ref, self.lambda_ang)
 
         # ---- logging ----
         self.log(f"{stage}_loss", loss, on_epoch=True, prog_bar=True, batch_size=ref.size(0))
